@@ -1,13 +1,17 @@
 package com.roohandeh.holoomapproject
 
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
+import android.view.LayoutInflater
+import com.roohandeh.holoomapproject.databinding.ActivityMainBinding
+import com.roohandeh.holoomapproject.presentation.base.BaseBindingActivity
 
+class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
 
-class MainActivity : AppCompatActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+    override val bindingInflater: (LayoutInflater) -> ActivityMainBinding = { layoutInflater ->
+        ActivityMainBinding.inflate(layoutInflater)
+    }
+
+    override fun initView() {
 
     }
 }
+

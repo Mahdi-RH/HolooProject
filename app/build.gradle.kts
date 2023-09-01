@@ -41,6 +41,10 @@ android {
             isUniversalApk = false
         }
     }
+
+    buildFeatures{
+        viewBinding = true
+    }
 }
 
 dependencies {
