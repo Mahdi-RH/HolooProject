@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">HolooMapProject</string>
+    <string name="turn_on_gps_message">For having a better performance turn on the gps please.</string>
+    <string name="turn_on_gps_title">Gps Activation\n</string>
+    <string name="turn_on_internet_title">Internet Activation\n</string>
+    <string name="turn_on_internet_message">For Using this application you need to turn on your Internet\n</string>
+    <string name="later">Later</string>
+    <string name="activation">Activation\n</string>
+    <string name="wifi_internet">WiFi Internet\n</string>
+    <string name="data_internet">Data Internet\n</string>
 </resources>

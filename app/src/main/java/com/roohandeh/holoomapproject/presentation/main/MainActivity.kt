@@ -1,4 +1,4 @@
-package com.roohandeh.holoomapproject
+package com.roohandeh.holoomapproject.presentation.main
 
 import android.view.LayoutInflater
 import com.roohandeh.holoomapproject.databinding.ActivityMainBinding
@@ -11,7 +11,12 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
     }
 
     override fun initView() {
-
     }
+
+    override fun onResume() {
+        super.onResume()
+        checkGpsAndInternetAvailability()
+    }
+
 }
 
