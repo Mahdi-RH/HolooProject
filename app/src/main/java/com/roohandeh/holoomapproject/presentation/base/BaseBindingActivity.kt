@@ -1,34 +1,30 @@
 package com.roohandeh.holoomapproject.presentation.base
 
-import android.app.Dialog
-import android.content.Context
-import android.content.DialogInterface
-import android.content.Intent
+import android.content.IntentFilter
 import android.location.LocationManager
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.annotation.DrawableRes
-import androidx.annotation.RequiresApi
-import androidx.annotation.StringRes
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.viewbinding.ViewBinding
-import com.roohandeh.holoomapproject.R
 import com.roohandeh.holoomapproject.databinding.ActivityBaseBinding
-import com.roohandeh.holoomapproject.utils.NetworkCallBack
+import com.roohandeh.holoomapproject.utils.AlertCreator
+import com.roohandeh.holoomapproject.utils.ConnectivityObserver
+import com.roohandeh.holoomapproject.utils.GpsReceiver
+import com.roohandeh.holoomapproject.utils.GpsStatus
+import com.roohandeh.holoomapproject.utils.NetworkConnectivityManager
+import com.roohandeh.holoomapproject.utils.isGpsEnabled
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 /**
  *  A parent for every activity that want to implement viewBinding.
  *
  */
 abstract class
-BaseBindingActivity<out VB : ViewBinding> : AppCompatActivity(),NetworkCallBack {
+BaseBindingActivity<out VB : ViewBinding> : AppCompatActivity() {
 
     private lateinit var _binding: ViewBinding
     abstract val bindingInflater: (LayoutInflater) -> VB
@@ -36,14 +32,15 @@ BaseBindingActivity<out VB : ViewBinding> : AppCompatActivity(),NetworkCallBack 
     protected val binding: VB
         get() = _binding as VB
     private lateinit var baseViewBinding: ActivityBaseBinding
-    private var internetActivationDialog: Dialog? = null
+    private lateinit var networkConnectivityManager: NetworkConnectivityManager
+    private val gpsSwitchStateReceiver = GpsReceiver()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        networkConnectivityManager = NetworkConnectivityManager(this)
         baseViewBinding = ActivityBaseBinding.inflate(layoutInflater)
         _binding = bindingInflater.invoke(layoutInflater)
         setContentView(_binding.root)
-
     }
 
     /**
@@ -72,115 +69,66 @@ BaseBindingActivity<out VB : ViewBinding> : AppCompatActivity(),NetworkCallBack 
 
     abstract fun initView()
 
-    fun checkGpsAndInternetAvailability() {
-        if (isGpsEnabled().not()) {
-            showGpsActivationDialog()
-            return
-        }
-        if (isNetworkAvailable().not()) {
-            internetActivationDialog = showInternetActivationDialog()
-            return
-        }
-    }
-
-     private fun showInternetActivationDialog():Dialog {
-        return showSimpleDialog(
-            R.string.turn_on_internet_title,
-            R.string.turn_on_internet_message,
-            R.drawable.icon_wifi_data,
-            {
-                startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS))
-                it.dismiss()
-            }, {
-                startActivity(Intent(android.provider.Settings.ACTION_DATA_ROAMING_SETTINGS))
-                it.dismiss()
-            }, R.string.wifi_internet,
-            R.string.data_internet
-        )
-    }
-
-    private fun showGpsActivationDialog():Dialog {
-        return showSimpleDialog(
-            R.string.turn_on_gps_title,
-            R.string.turn_on_gps_message,
-            R.drawable.icon_gps_fixed,
-            {
-                startActivity( Intent (android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-                it.dismiss()
-            }, {
-
-            }, R.string.activation
-        )
-    }
-
-    private fun isGpsEnabled() =
-        (getSystemService(Context.LOCATION_SERVICE) as LocationManager).isProviderEnabled(
-            LocationManager.GPS_PROVIDER
-        )
-
-    @RequiresApi(Build.VERSION_CODES.N)
-    private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        connectivityManager.registerDefaultNetworkCallback(object :
-            ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                super.onAvailable(network)
-                onAvailableNetwork(network)
-            }
-        })
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val nw = connectivityManager.activeNetwork ?: return false
-            val actNw = connectivityManager.getNetworkCapabilities(nw) ?: return false
-            return when {
-                actNw.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
-                actNw.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
-                //for other device how are able to connect with Ethernet
-                actNw.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
-                //for check internet over Bluetooth
-                actNw.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH) -> true
-                else -> false
-            }
+    fun checkGpsAvailability() {
+        if (isGpsEnabled(this)) {
+            AlertCreator.dismissGpsActivationDialog()
         } else {
-            return connectivityManager.activeNetworkInfo?.isConnectedOrConnecting ?: false
+            AlertCreator.showGpsActivationDialog(this)
+        }
+        gpsSwitchStateReceiver.gpsStatus.observe(this) {
+            if (it == GpsStatus.Available) {
+                AlertCreator.dismissGpsActivationDialog()
+            } else if (it == GpsStatus.UnAvailable) {
+                AlertCreator.showGpsActivationDialog(this)
+            }
         }
     }
 
-    private fun showSimpleDialog(
-        @StringRes title: Int,
-        @StringRes message: Int,
-        @DrawableRes icon: Int,
-        positiveButtonListener: ((DialogInterface) -> Unit)? = null,
-        negativeButtonListener: ((DialogInterface) -> Unit)? = null,
-        @StringRes positiveButtonText: Int? = null,
-        @StringRes negativeButtonText: Int? = null
-    ) :Dialog{
-        val dialog = AlertDialog.Builder(this)
-        dialog.setTitle(title)
-        dialog.setIcon(icon)
-        dialog.setMessage(message)
-        dialog.setCancelable(false)
-        positiveButtonText?.let { text ->
-            positiveButtonListener?.let {
-                dialog.setPositiveButton(resources.getString(text)) { dialogInterface, _ ->
-                    positiveButtonListener(dialogInterface)
+    fun checkInternetAvailability() {
+        if (networkConnectivityManager.isNetworkAvailable()) {
+            AlertCreator.dismissInternetActivationDialog()
+        } else {
+            AlertCreator.showInternetActivationDialog(this)
+        }
+        networkConnectivityManager.observe().onEach {
+            when (it) {
+                ConnectivityObserver.Status.Available -> {
+                    runOnUiThread {
+                        AlertCreator.dismissInternetActivationDialog()
+                    }
+                }
+                ConnectivityObserver.Status.UnAvailable -> {
+                    runOnUiThread {
+                        AlertCreator.showInternetActivationDialog(this)
+                    }
+                }
+                ConnectivityObserver.Status.Lost -> {
+                    runOnUiThread {
+                        AlertCreator.showInternetActivationDialog(this)
+                    }
                 }
             }
-        }
-        negativeButtonText?.let { text ->
-            negativeButtonListener?.let {
-                dialog.setNegativeButton(resources.getString(text)) { dialogInterface, _ ->
-                    negativeButtonListener(dialogInterface)
-                }
-            }
-        }
-        return dialog.show()
+        }.launchIn(lifecycleScope)
     }
 
-    override fun onAvailableNetwork(network: Network) {
-        internetActivationDialog?.let {
-            if (it.isShowing) {
-                it.dismiss()
-            }
-        }
+    override fun onResume() {
+        super.onResume()
+        registerGpsSwitchStateReceiver()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unRegisterGpsSwitchStateReceiver()
+    }
+
+    private fun registerGpsSwitchStateReceiver() {
+        registerReceiver(
+            gpsSwitchStateReceiver,
+            IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION)
+        )
+    }
+
+    private fun unRegisterGpsSwitchStateReceiver() {
+        unregisterReceiver(gpsSwitchStateReceiver)
     }
 }
