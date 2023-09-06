@@ -4,76 +4,48 @@ import android.app.Dialog
 import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import com.roohandeh.holoomapproject.R
+import java.lang.Exception
 
 object AlertCreator {
 
-    private var internetActivationDialog: Dialog? = null
-    private var gpsActivationDialog: Dialog? = null
+    private var locationPermissionDialog: Dialog? = null
 
-    fun showInternetActivationDialog(context: Context) {
-        if (internetActivationDialog == null) {
-            internetActivationDialog = showSimpleDialog(
-                context,
-                R.string.turn_on_internet_title,
-                R.string.turn_on_internet_message,
-                R.drawable.icon_wifi_data,
-                {
-                    context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
-                    it.dismiss()
-                }, {
-                    context.startActivity(Intent(Settings.ACTION_DATA_ROAMING_SETTINGS))
-                    it.dismiss()
-                }, R.string.wifi_internet,
-                R.string.data_internet
-            )
-        } else {
-            internetActivationDialog?.show()
-        }
-    }
-
-    fun dismissInternetActivationDialog() {
-        internetActivationDialog?.let {
-            if (it.isShowing) {
-                it.dismiss()
-            }
-        }
-    }
-
-    fun showGpsActivationDialog(context: Context) {
-        if (gpsActivationDialog == null) {
-            gpsActivationDialog = showSimpleDialog(
+    fun showLocationPermissionDialog(context: Context) {
+        if (locationPermissionDialog == null) {
+            locationPermissionDialog = showSimpleDialog(
                 context,
                 R.string.turn_on_gps_title,
-                R.string.turn_on_gps_message,
+                R.string.access_location_permission_message,
                 R.drawable.icon_gps_fixed,
                 {
-                    context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-                    it.dismiss()
-                }, {
-
-                }, R.string.activation
+                    try {
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        intent.data = Uri.parse("package:" + context.packageName)
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                    }
+                },
+                null,
+                R.string.activation
             )
         } else {
-            gpsActivationDialog?.show()
-        }
-    }
-
-    fun dismissGpsActivationDialog() {
-        gpsActivationDialog?.let {
-            if (it.isShowing) {
-                it.dismiss()
+            locationPermissionDialog?.let { dialog ->
+                if (dialog.isShowing.not()) {
+                    dialog.show()
+                }
             }
         }
     }
 
     private fun showSimpleDialog(
         context: Context,
-        @StringRes title: Int,
+        @StringRes title: Int? = null,
         @StringRes message: Int,
         @DrawableRes icon: Int,
         positiveButtonListener: ((DialogInterface) -> Unit)? = null,
@@ -82,7 +54,9 @@ object AlertCreator {
         @StringRes negativeButtonText: Int? = null
     ): Dialog {
         val dialog = AlertDialog.Builder(context)
-        dialog.setTitle(title)
+        title?.let { title ->
+            dialog.setTitle(title)
+        }
         dialog.setIcon(icon)
         dialog.setMessage(message)
         dialog.setCancelable(false)
@@ -100,8 +74,6 @@ object AlertCreator {
                 }
             }
         }
-
         return dialog.show()
     }
-
 }

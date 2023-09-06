@@ -1,11 +1,9 @@
 <resources>
     <string name="app_name">HolooMapProject</string>
-    <string name="turn_on_gps_message">For having a better performance turn on the gps please.</string>
-    <string name="turn_on_gps_title">Gps Activation\n</string>
-    <string name="turn_on_internet_title">Internet Activation\n</string>
-    <string name="turn_on_internet_message">For Using this application you need to turn on your Internet\n</string>
-    <string name="later">Later</string>
-    <string name="activation">Activation\n</string>
-    <string name="wifi_internet">WiFi Internet\n</string>
-    <string name="data_internet">Data Internet\n</string>
+    <string name="turn_on_gps_message">Turn on the gps of your device.</string>
+    <string name="access_location_permission_message">This app need location permission.</string>
+    <string name="turn_on_gps_title">Gps Activation</string>
+    <string name="turn_on_internet_message">Turn on your Internet</string>
+    <string name="activation">Activation</string>
+    <string name="try_again">Map is not initialized yet. Try again after a few seconds</string>
 </resources>

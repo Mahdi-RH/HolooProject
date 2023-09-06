@@ -11,13 +11,6 @@ class MainActivity : BaseBindingActivity<ActivityMainBinding>() {
     }
 
     override fun initView() {
-
-    }
-
-    override fun onResume() {
-        super.onResume()
-        checkGpsAvailability()
-        checkInternetAvailability()
     }
 }
 
