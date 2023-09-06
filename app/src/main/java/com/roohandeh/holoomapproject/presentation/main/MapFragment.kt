@@ -1,6 +1,9 @@
 package com.roohandeh.holoomapproject.presentation.main
 
 import android.Manifest
+import android.app.Activity.RESULT_CANCELED
+import android.app.Activity.RESULT_OK
+import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
@@ -21,7 +24,7 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
 import com.google.android.gms.location.LocationSettingsStatusCodes
-import com.google.android.gms.location.Priority
+import com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY
 import com.google.android.gms.location.SettingsClient
 import com.google.android.gms.tasks.OnSuccessListener
 import com.roohandeh.holoomapproject.R
@@ -55,8 +58,8 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
     private var locationCallback: LocationCallback? = null
     private var lastUpdateTime: String? = null
     private var marker: Marker? = null
-    private lateinit var mainActivity :  MainActivity
-    private lateinit var connectivityManager :NetworkConnectivityManager
+    private lateinit var mainActivity: MainActivity
+    private lateinit var connectivityManager: NetworkConnectivityManager
 
     override val bindingInflater: (LayoutInflater, ViewGroup?, Boolean) -> FragmentMapBinding =
         { layoutInflater, viewGroup, attachedToParent ->
@@ -68,6 +71,7 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
         initLocation()
         startReceivingLocationUpdates()
     }
+
     override fun initView() {
         mainActivity = activity as MainActivity
         connectivityManager = mainActivity.networkConnectivityManager
@@ -98,29 +102,21 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
         connectivityManager.observe().onEach {
             when (it) {
                 ConnectivityObserver.Status.Available -> {
-                    mainActivity.runOnUiThread {
-                        context?.let { context ->
-                            if (isGpsEnabled(context)) {
-                                mainActivity.hideTopViewMessage()
-                                startLocationUpdates()
-                                initMapForFirstTime()
-                            } else {
-                                mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_gps_message))
-                            }
-                        }
+                    if (isGpsEnabled(mainActivity)) {
+                        mainActivity.hideTopViewMessage()
+                        startLocationUpdates()
+                        initMapForFirstTime()
+                    } else {
+                        mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_gps_message))
                     }
                 }
 
                 ConnectivityObserver.Status.UnAvailable -> {
-                    mainActivity.runOnUiThread {
-                        mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_internet_message))
-                    }
+                    mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_internet_message))
                 }
 
                 ConnectivityObserver.Status.Lost -> {
-                    mainActivity.runOnUiThread {
-                        mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_internet_message))
-                    }
+                    mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_internet_message))
                 }
             }
         }.launchIn(lifecycleScope)
@@ -135,11 +131,8 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
     }
 
     private fun initLocation() {
-        activity?.let { fragmentActivity ->
-            fusedLocationClient = LocationServices.getFusedLocationProviderClient(fragmentActivity)
-            settingsClient = LocationServices.getSettingsClient(fragmentActivity)
-        }
-
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(mainActivity)
+        settingsClient = LocationServices.getSettingsClient(mainActivity)
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
@@ -149,9 +142,8 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
                 onLocationChange()
             }
         }
-//        mRequestingLocationUpdates = false
         locationRequest = LocationRequest.Builder(
-            Priority.PRIORITY_HIGH_ACCURACY,
+            PRIORITY_HIGH_ACCURACY,
             UPDATE_INTERVAL_IN_MILLISECONDS
         ).build()
         val builder = LocationSettingsRequest.Builder()
@@ -183,61 +175,46 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
 
     private fun focusOnUserLocation() {
         if (connectivityManager.isNetworkAvailable()) {
-            context?.let { context ->
-                if (isGpsEnabled(context)) {
-                    if (userLocation != null) {
-                        binding.map.moveCamera(
-                            LatLng(userLocation!!.latitude, userLocation!!.longitude), 0.25f
-                        )
-                        binding.map.setZoom(15f, 0.25f)
-                    } else {
-                        showToast(resources.getString(R.string.try_again))
-                        startReceivingLocationUpdates()
-                    }
+            if (isGpsEnabled(mainActivity)) {
+                if (userLocation != null) {
+                    binding.map.moveCamera(
+                        LatLng(userLocation!!.latitude, userLocation!!.longitude), 0.25f
+                    )
+                    binding.map.setZoom(15f, 0.25f)
                 } else {
-                    showToast(resources.getString(R.string.turn_on_gps_message))
+                    showToast(resources.getString(R.string.try_again))
+                    startReceivingLocationUpdates()
                 }
+            } else {
+                showToast(resources.getString(R.string.turn_on_gps_message))
             }
-        }else {
+        } else {
             showToast(resources.getString(R.string.turn_on_internet_message))
         }
     }
 
     private fun startReceivingLocationUpdates() {
-        context?.let {fragmentActivity->
-            if (ContextCompat.checkSelfPermission(
-                    fragmentActivity,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(
-                    fragmentActivity,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-//                mRequestingLocationUpdates = true
-                context?.let { context ->
-                    if (connectivityManager.isNetworkAvailable()) {
-                        if (isGpsEnabled(context)) {
-                            mainActivity.hideTopViewMessage()
-                            startLocationUpdates()
-                        } else {
-                            mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_gps_message))
-                        }
-                    } else {
-                        mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_internet_message))
-                        //                        AlertCreator.showInternetActivationDialog(context)
-                    }
+        if (isLocationPermissionsGranted()
+        ) {
+            if (connectivityManager.isNetworkAvailable()) {
+                if (isGpsEnabled(mainActivity)) {
+                    mainActivity.hideTopViewMessage()
+                    startLocationUpdates()
+                } else {
+                    mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_gps_message))
                 }
             } else {
-                requestPermissions(
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    ), REQUEST_CODE
-                )
+                mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_internet_message))
             }
-
+        } else {
+            requestPermissions(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ), REQUEST_CODE
+            )
         }
-        }
+    }
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -245,126 +222,102 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
         if (requestCode == REQUEST_CODE) {
-            context?.let {context ->
-                if (ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
-                    && ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    if (connectivityManager.isNetworkAvailable()) {
-                        if (isGpsEnabled(context)) {
-                            startLocationUpdates()
-                            mainActivity.hideTopViewMessage()
-                        } else {
-                            mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_gps_message))
-                        }
+            if (isLocationPermissionsGranted()) {
+                if (connectivityManager.isNetworkAvailable()) {
+                    if (isGpsEnabled(mainActivity)) {
+                        startLocationUpdates()
+                        mainActivity.hideTopViewMessage()
                     } else {
-                        mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_internet_message))
+                        mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_gps_message))
                     }
                 } else {
-                    AlertCreator.showLocationPermissionDialog(context)
+                    mainActivity.showTopViewMessage(resources.getString(R.string.turn_on_internet_message))
                 }
+            } else {
+                AlertCreator.showLocationPermissionDialog(mainActivity)
             }
-
         }
     }
+
+    private fun isLocationPermissionsGranted() = (ContextCompat.checkSelfPermission(
+        mainActivity,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+            && ContextCompat.checkSelfPermission(
+        mainActivity,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED)
 
     private fun startLocationUpdates() {
-        context?.let {context ->
-            locationSettingsRequest?.let {locationSettingsRequest->
-                    settingsClient
-                        .checkLocationSettings(locationSettingsRequest)
-                        .addOnSuccessListener( OnSuccessListener {
+        locationSettingsRequest?.let { locationSettingsRequest ->
+            settingsClient
+                .checkLocationSettings(locationSettingsRequest)
+                .addOnSuccessListener(OnSuccessListener {
+                    if (ContextCompat.checkSelfPermission(
+                            mainActivity,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        ) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(
+                            mainActivity,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        ) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        showToast(resources.getString(R.string.access_location_permission_message))
+                        return@OnSuccessListener
+                    }
+                    locationCallback?.let { locationCallback ->
+                        fusedLocationClient.requestLocationUpdates(
+                            locationRequest,
+                            locationCallback,
+                            Looper.myLooper()
+                        )
+                    }
+                })
+                .addOnFailureListener { e ->
+                    when ((e as ApiException).statusCode) {
+                        LocationSettingsStatusCodes.RESOLUTION_REQUIRED -> try {
+                            // Show the dialog by calling startResolutionForResult(), and check the
+                            // result in onActivityResult().
+                            val rae = e as ResolvableApiException
+                            rae.startResolutionForResult(mainActivity, REQUEST_CODE)
+                        } catch (sie: IntentSender.SendIntentException) {
                             Log.i(
                                 TAG,
-                                "All location settings are satisfied."
+                                "PendingIntent unable to execute request."
                             )
-                            if (ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.ACCESS_FINE_LOCATION
-                                ) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                ) != PackageManager.PERMISSION_GRANTED
-                            ) {
-                                Log.d("UserLocationUpdater", " required permissions are not granted ")
-                                return@OnSuccessListener
-                            }
-                            locationCallback?.let { locationCallback ->
-                                fusedLocationClient.requestLocationUpdates(
-                                    locationRequest,
-                                    locationCallback,
-                                    Looper.myLooper()
-                                )
-                            }
-                        })
-                        .addOnFailureListener { e ->
-                            val statusCode = (e as ApiException).statusCode
-                            when (statusCode) {
-                                LocationSettingsStatusCodes.RESOLUTION_REQUIRED -> try {
-                                    Log.i(
-                                        TAG,
-                                        "Location settings are not satisfied. Attempting to upgrade location settings"
-                                    )
-                                    // Show the dialog by calling startResolutionForResult(), and check the
-                                    // result in onActivityResult().
-                                    val rae = e as ResolvableApiException
-//                                    rae.startResolutionForResult(, REQUEST_CODE)
-                                } catch (sie: IntentSender.SendIntentException) {
-                                    Log.i(
-                                        TAG,
-                                        "PendingIntent unable to execute request."
-                                    )
-                                }
-
-                                LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE -> {
-                                    val errorMessage =
-                                        "Location settings are inadequate, and cannot be fixed here. Fix in Settings."
-                                    Log.e(
-                                        TAG,
-                                        errorMessage
-                                    )
-                                    showToast(errorMessage)
-                                }
-                            }
                         }
-            }
+
+                        LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE -> {
+                            showToast(resources.getString(R.string.location_settings_are_inadequate))
+                        }
+                    }
+                }
         }
-
-
     }
 
-//    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-//        super.onActivityResult(requestCode, resultCode, data)
-//        when (requestCode) {
-//            REQUEST_CODE -> {
-//                when (resultCode) {
-//                    RESULT_OK -> {
-//                        Log.e(
-//                            TAG,
-//                            "User agreed to make required location settings changes."
-//                        )
-////                        mRequestingLocationUpdates = true
-//                        startLocationUpdates()
-//                    }
-//
-//                    RESULT_CANCELED -> {
-//                        Log.e(
-//                            TAG,
-//                            "User choose not to make required location settings changes."
-//                        )
-////                        mRequestingLocationUpdates = false
-//                    }
-//                }
-//            }
-//        }
-//    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        when (requestCode) {
+            REQUEST_CODE -> {
+                when (resultCode) {
+                    RESULT_OK -> {
+                        Log.e(
+                            TAG,
+                            "User agreed to make required location settings changes."
+                        )
+                        startLocationUpdates()
+                    }
+
+                    RESULT_CANCELED -> {
+                        Log.e(
+                            TAG,
+                            "User choose not to make required location settings changes."
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     private fun stopLocationUpdates() {
         locationCallback?.let { locationCallback ->
