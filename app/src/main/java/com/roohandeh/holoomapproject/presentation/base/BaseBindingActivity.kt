@@ -72,6 +72,10 @@ BaseBindingActivity<out VB : ViewBinding> : AppCompatActivity() {
         baseViewBinding.textTopViewMessage.visibility = View.GONE
     }
 
+    fun setProgressbarVisibility(visibility: Boolean) {
+        baseViewBinding.progressBase.visibility = if (visibility) View.VISIBLE else View.GONE
+    }
+
     override fun onResume() {
         super.onResume()
         registerGpsSwitchStateReceiver()

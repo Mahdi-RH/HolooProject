@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="img_avenue_icon" type="id"/>
+    <item name="img_address_icon" type="id"/>
+    <item name="address_line_view" type="id"/>
+    <item name="address_view" type="id"/>
+    <item name="btn_routing" type="id"/>
+    <item name="btn_close" type="id"/>
+    <item name="btn_save" type="id"/>
+    <item name="btn_saved_list" type="id"/>
+</resources>

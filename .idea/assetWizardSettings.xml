@@ -18,7 +18,7 @@
                                 <PersistentState>
                                   <option name="values">
                                     <map>
-                                      <entry key="url" value="file:$PROJECT_DIR$/../../../Sdk/icons/material/materialicons/cell_wifi/baseline_cell_wifi_24.xml" />
+                                      <entry key="url" value="file:$PROJECT_DIR$/../../../Sdk/icons/material/materialicons/close/baseline_close_24.xml" />
                                     </map>
                                   </option>
                                 </PersistentState>
@@ -28,7 +28,9 @@
                         </option>
                         <option name="values">
                           <map>
-                            <entry key="outputName" value="icon_wifi" />
+                            <entry key="color" value="614848" />
+                            <entry key="outputName" value="icon_close" />
+                            <entry key="sourceFile" value="$USER_HOME$/Downloads/17113140881646915951.svg" />
                           </map>
                         </option>
                       </PersistentState>

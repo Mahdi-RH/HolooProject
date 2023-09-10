@@ -1,10 +1,18 @@
 <resources>
     <string name="app_name">HolooMapProject</string>
-    <string name="turn_on_gps_message">Turn on the gps of your device.</string>
-    <string name="access_location_permission_message">This app need location permission.</string>
-    <string name="turn_on_gps_title">Gps Activation</string>
-    <string name="turn_on_internet_message">Turn on your Internet</string>
-    <string name="activation">Activation</string>
-    <string name="try_again">Map is not initialized yet. Try again after a few seconds</string>
-    <string name="location_settings_are_inadequate">Location settings are inadequate, and cannot be fixed here. Fix in Settings</string>
+    <string name="turn_on_gps_message">جی پی اس گوشی خود را روشن کنید</string>
+    <string name="access_location_permission_message">برای کار کردن با این برنامه باید به آن دسترسی لوکیشن بدهید</string>
+    <string name="turn_on_gps_title">مکان نما خود را روشن کنید</string>
+    <string name="turn_on_internet_message">اینترنت خود را روشن کنید</string>
+    <string name="activation">فعال کردن</string>
+    <string name="try_again">نقشه هنوز آماده نشده. بعد از چند ثانیه دوباره امتحان کنید</string>
+    <string name="location_settings_are_inadequate">به تنظیمات گوشی خود رفته و دسترسی لوکیشن را فعال کنید</string>
+    <string name="search">جستجو</string>
+    <string name="enter_lat_long">عرض و طول جغرافیایی را وارد کنید</string>
+    <string name="enter_lat_long_error_message">عرض و طول جغرافیایی را درست وارد کنید</string>
+    <string name="lat_hint">عرض جغرافیایی</string>
+    <string name="long_hint">طول جغرافیایی</string>
+    <string name="routing">مسیریابی</string>
+    <string name="save">ذخیره</string>
+    <string name="saved_places">ذخیره‌شده‌ها</string>
 </resources>

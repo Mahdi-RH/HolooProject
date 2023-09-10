@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.appcompat.widget.LinearLayoutCompat xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="18dp"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.AppCompatTextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:gravity="center"
+        android:text="@string/enter_lat_long"
+        android:textSize="18sp" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/editLat"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="numberDecimal"
+        android:layout_margin="8dp"
+        android:background="@drawable/bg_edit_lat_long"
+        android:gravity="center_vertical"
+        android:hint="@string/lat_hint"
+        android:maxLines="1"
+        android:padding="6dp"
+        android:singleLine="true"
+        android:textColor="@android:color/darker_gray"
+        android:textSize="16sp" />
+
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/editLong"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="numberDecimal"
+        android:layout_margin="8dp"
+        android:background="@drawable/bg_edit_lat_long"
+        android:gravity="center_vertical"
+        android:hint="@string/long_hint"
+        android:maxLines="1"
+        android:padding="6dp"
+        android:singleLine="true"
+        android:textColor="@android:color/darker_gray"
+        android:textSize="16sp" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btn_search"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:gravity="center"
+        android:padding="4dp"
+        android:text="@string/search" />
+
+</androidx.appcompat.widget.LinearLayoutCompat>
