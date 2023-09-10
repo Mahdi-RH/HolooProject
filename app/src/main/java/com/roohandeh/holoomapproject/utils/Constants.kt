@@ -11,3 +11,4 @@ const val IO_DISPATCHER = "io_dispatcher"
 const val TEHRAN_LATITUDE = 35.715298
 const val TEHRAN_LONGITUDE = 51.404343
 const val MAP_ZOOM_DEGREE = 11.5f
+const val DATABASE_NAME = "map_db"

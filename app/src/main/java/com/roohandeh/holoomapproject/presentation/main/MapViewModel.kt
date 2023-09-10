@@ -5,8 +5,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.roohandeh.holoomapproject.data.network.RoutingCallback
+import com.roohandeh.holoomapproject.domain.model.SavedLocation
 import com.roohandeh.holoomapproject.domain.usecase.GetAddressUseCase
+import com.roohandeh.holoomapproject.domain.usecase.GetLocationsUseCase
 import com.roohandeh.holoomapproject.domain.usecase.GetRoutesUseCase
+import com.roohandeh.holoomapproject.domain.usecase.SaveLocationUseCase
 import com.roohandeh.holoomapproject.utils.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.launchIn
@@ -19,13 +22,18 @@ import javax.inject.Inject
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val getAddressUseCase: GetAddressUseCase,
-    private val getRoutesUseCase: GetRoutesUseCase):ViewModel() {
+    private val getRoutesUseCase: GetRoutesUseCase,
+    private val saveLocationUseCase: SaveLocationUseCase,
+    private val getLocationsUseCase: GetLocationsUseCase):ViewModel() {
 
     private val _address = MutableLiveData<LocationAddressViewState>()
     val address: LiveData<LocationAddressViewState> = _address
 
     private val _routing = MutableLiveData<RoutingViewState>()
     val routing: LiveData<RoutingViewState> = _routing
+
+    private val _savedLocation = MutableLiveData<SavedLocationState>()
+    val savedLocation: LiveData<SavedLocationState> = _savedLocation
 
 
     fun getAddress(lat: Double, lng: Double) {
@@ -67,4 +75,46 @@ class MapViewModel @Inject constructor(
             })
         }
     }
+
+    fun saveLocation(location: SavedLocation) {
+        viewModelScope.launch {
+            saveLocationUseCase.invoke(location).onEach { result ->
+                when (result) {
+                    is Resource.Loading -> {
+                        _savedLocation.value = SavedLocationState(loading = true)
+                    }
+
+                    is Resource.Success -> {
+                        _savedLocation.value = SavedLocationState(savedLocationId = result.data)
+                    }
+
+                    is Resource.Error -> {
+                        _savedLocation.value = SavedLocationState(errorMessage = result.message)
+                    }
+                }
+
+            }.launchIn(viewModelScope)
+        }
+    }
+
+    fun getLocations() {
+        viewModelScope.launch {
+            getLocationsUseCase.invoke().onEach { result ->
+                when (result) {
+                    is Resource.Loading -> {
+
+                    }
+
+                    is Resource.Success -> {
+                    }
+
+                    is Resource.Error -> {
+
+                    }
+                }
+
+            }.launchIn(viewModelScope)
+        }
+    }
+
 }

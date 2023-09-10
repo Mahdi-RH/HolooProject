@@ -1,5 +1,6 @@
 package com.roohandeh.holoomapproject.data.network.model
 
+import com.roohandeh.holoomapproject.domain.model.LocationAddress
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -19,4 +20,9 @@ data class LocationAddressResponse(
     @Json(name = "village") var village: String? = null,
     @Json(name = "county") val county: String? = null,
     @Json(name = "district") val district: String? = null
+)
+
+fun LocationAddressResponse.toLocationAddress() = LocationAddress(
+    formattedAddress ?: "آدرس انتخاب شده",
+    routeName ?: "مکان انتخاب شده"
 )

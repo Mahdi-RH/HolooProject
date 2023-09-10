@@ -31,7 +31,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="22dp"
-        android:background="@drawable/bg_edit_search"
+        android:background="@drawable/bg_edit_normal"
         android:drawableEnd="@drawable/icon_search"
         android:focusable="false"
         android:gravity="center_vertical"

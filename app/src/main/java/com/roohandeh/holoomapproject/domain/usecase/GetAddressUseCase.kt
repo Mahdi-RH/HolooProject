@@ -1,5 +1,6 @@
 package com.roohandeh.holoomapproject.domain.usecase
 
+import com.roohandeh.holoomapproject.data.network.model.toLocationAddress
 import com.roohandeh.holoomapproject.domain.model.LocationAddress
 import com.roohandeh.holoomapproject.domain.repository.MapRepository
 import com.roohandeh.holoomapproject.utils.IO_DISPATCHER
@@ -22,10 +23,7 @@ class GetAddressUseCase @Inject constructor(
             val addressResponse = repository.getAddress(lat, lng)
             emit(
                 Resource.Success(
-                    LocationAddress(
-                        addressResponse.formattedAddress ?: "آدرس انتخاب شده",
-                        addressResponse.routeName ?: "مکان انتخاب شده"
-                    )
+                    addressResponse.toLocationAddress()
                 )
             )
         } catch (ioException: IOException) {

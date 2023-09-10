@@ -14,5 +14,9 @@
     <string name="long_hint">طول جغرافیایی</string>
     <string name="routing">مسیریابی</string>
     <string name="save">ذخیره</string>
+    <string name="fill_caption_message">یک عنوان برای این مکان بنویسید</string>
+    <string name="success_saved_location_message">مکان مورد نظر با موفقیت ذخیره شد</string>
     <string name="saved_places">ذخیره‌شده‌ها</string>
+    <string name="save_location_title">ذخیره مکان شخصی</string>
+    <string name="caption">عنوان</string>
 </resources>

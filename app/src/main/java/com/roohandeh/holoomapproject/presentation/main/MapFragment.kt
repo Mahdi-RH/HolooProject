@@ -3,6 +3,7 @@ package com.roohandeh.holoomapproject.presentation.main
 import android.Manifest
 import android.app.Activity.RESULT_CANCELED
 import android.app.Activity.RESULT_OK
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
@@ -11,6 +12,7 @@ import android.location.Location
 import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -25,6 +27,8 @@ import com.carto.styles.AnimationType
 import com.carto.styles.LineStyle
 import com.carto.styles.LineStyleBuilder
 import com.carto.styles.MarkerStyleBuilder
+import com.carto.styles.TextMargins
+import com.carto.styles.TextStyleBuilder
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -41,8 +45,10 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.roohandeh.holoomapproject.R
 import com.roohandeh.holoomapproject.databinding.FragmentMapBinding
+import com.roohandeh.holoomapproject.databinding.SaveLocationViewBinding
 import com.roohandeh.holoomapproject.databinding.SearachBottomSheetLayoutBinding
 import com.roohandeh.holoomapproject.domain.model.LocationAddress
+import com.roohandeh.holoomapproject.domain.model.SavedLocation
 import com.roohandeh.holoomapproject.presentation.base.BaseBindingFragment
 import com.roohandeh.holoomapproject.presentation.custom_views.CustomRoutingView
 import com.roohandeh.holoomapproject.utils.ConnectivityObserver
@@ -67,6 +73,7 @@ import org.neshan.common.utils.PolylineEncoding
 import org.neshan.mapsdk.MapView
 import org.neshan.mapsdk.MapView.LogoType
 import org.neshan.mapsdk.internal.utils.BitmapUtils
+import org.neshan.mapsdk.model.Label
 import org.neshan.mapsdk.model.Marker
 import org.neshan.mapsdk.model.Polyline
 import org.neshan.servicessdk.direction.model.Route
@@ -129,6 +136,27 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
         initAddressSearchView()
         observeAddress()
         observeRouting()
+        observeSavedLocation()
+    }
+
+    private fun observeSavedLocation() {
+        viewModel.savedLocation.observe(viewLifecycleOwner) { savedLocationState ->
+            when {
+                savedLocationState.loading -> {
+                    mainActivity.setProgressbarVisibility(true)
+                }
+
+                savedLocationState.savedLocationId != null -> {
+                    mainActivity.setProgressbarVisibility(false)
+                    showToast(resources.getString(R.string.success_saved_location_message))
+                }
+
+                savedLocationState.errorMessage.isNullOrEmpty().not() -> {
+                    mainActivity.setProgressbarVisibility(false)
+                    showToast(savedLocationState.errorMessage!!)
+                }
+            }
+        }
     }
 
     private fun initAddressSearchView() {
@@ -492,6 +520,14 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
                 focusButton.fadeIn()
                 editAddressSearch.fadeIn()
             }
+            view.saveButton.setOnClickListener {
+                showSaveLocationDialog {
+                    view.saveButton.visibility = View.GONE
+                }
+            }
+            view.savedLocationsButton.setOnClickListener {
+                viewModel.getLocations()
+            }
             view.routingButton.setOnClickListener {
                 if (!isRouteFetched) {
                     fetchRoute()
@@ -500,6 +536,48 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
             }
         }
     }
+
+    private fun showSaveLocationDialog(savedLocationListener: () -> Unit) {
+        val view = SaveLocationViewBinding.inflate(layoutInflater)
+        val dialog = AlertDialog.Builder(context).setView(view.root).show()
+
+        view.btnSave.setOnClickListener {
+            if (view.editCaption.text.toString().isNullOrEmpty().not()) {
+                val savedLocation = saveLocation(view.editCaption.text.toString())
+                addLabelToMap(savedLocation)
+                savedLocationListener()
+                dialog.dismiss()
+            } else {
+                showToast(resources.getString(R.string.fill_caption_message))
+            }
+        }
+    }
+    private fun addLabelToMap(loc: SavedLocation) {
+
+        val textStyleBuilder = TextStyleBuilder()
+        textStyleBuilder.fontSize = 18f
+        textStyleBuilder.color = Color(-0x1)
+        textStyleBuilder.strokeWidth = 0.5f
+        textStyleBuilder.strokeColor = Color(-0x1)
+        textStyleBuilder.textMargins = TextMargins(5, 2, 5, 2)
+        textStyleBuilder.backgroundColor = Color(-0x10000)
+        val textStyle = textStyleBuilder.buildStyle()
+
+        val label = Label(createLatLngObject(loc.lat, loc.lng), textStyle, loc.caption)
+
+        mapView.addLabel(label)
+    }
+
+    private fun saveLocation(caption: String): SavedLocation {
+        val location = SavedLocation(
+            currentMarker!!.latLng.latitude,
+            currentMarker!!.latLng.longitude,
+            caption
+        )
+        viewModel.saveLocation(location)
+        return location
+    }
+
     private fun removeCurrentMarker() {
         if (currentMarker != null) {
             mapView.removeMarker(currentMarker)
