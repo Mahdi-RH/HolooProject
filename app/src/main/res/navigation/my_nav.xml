@@ -9,5 +9,20 @@
         android:id="@+id/mapFragment"
         android:name="com.roohandeh.holoomapproject.presentation.main.MapFragment"
         android:label="fragment_map"
-        tools:layout="@layout/fragment_map" />
+        tools:layout="@layout/fragment_map">
+        <action
+            android:id="@+id/action_mapFragment_to_savedLocationsFragment"
+            app:destination="@id/savedLocationsFragment"
+            app:enterAnim="@anim/slide_in_left"
+            app:exitAnim="@anim/slide_out_right"
+            app:popEnterAnim="@anim/slide_in_right"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/savedLocationsFragment"
+        android:name="com.roohandeh.holoomapproject.presentation.saved_locations.SavedLocationsFragment"
+        android:label="fragment_saved_locations"
+        tools:layout="@layout/fragment_saved_locations" />
+
 </navigation>

@@ -35,6 +35,8 @@ class MapViewModel @Inject constructor(
     private val _savedLocation = MutableLiveData<SavedLocationState>()
     val savedLocation: LiveData<SavedLocationState> = _savedLocation
 
+    private val _savedLocations = MutableLiveData<SavedLocationState>()
+    val savedLocations: LiveData<SavedLocationState> = _savedLocations
 
     fun getAddress(lat: Double, lng: Double) {
         getAddressUseCase(lat, lng).onEach {result->
@@ -102,14 +104,17 @@ class MapViewModel @Inject constructor(
             getLocationsUseCase.invoke().onEach { result ->
                 when (result) {
                     is Resource.Loading -> {
-
+                        _savedLocations.value = SavedLocationState(loading = true)
                     }
 
                     is Resource.Success -> {
+                        _savedLocations.value =
+                            SavedLocationState(savedLocations = result.data ?: emptyList())
                     }
 
                     is Resource.Error -> {
-
+                        _savedLocations.value =
+                            SavedLocationState(errorMessage = result.message)
                     }
                 }
 

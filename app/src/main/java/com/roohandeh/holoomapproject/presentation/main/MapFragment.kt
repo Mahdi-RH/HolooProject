@@ -18,8 +18,9 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ProgressBar
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
+import androidx.navigation.fragment.findNavController
 import com.carto.graphics.Color
 import com.carto.styles.AnimationStyle
 import com.carto.styles.AnimationStyleBuilder
@@ -66,8 +67,11 @@ import com.roohandeh.holoomapproject.utils.showToast
 import com.roohandeh.holoomapproject.utils.slideDown
 import com.roohandeh.holoomapproject.utils.slideUp
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.neshan.common.model.LatLng
 import org.neshan.common.utils.PolylineEncoding
 import org.neshan.mapsdk.MapView
@@ -105,8 +109,7 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
     private lateinit var editAddressSearch: EditText
     private lateinit var focusButton: FloatingActionButton
     private var searchBottomSheetDialog: BottomSheetDialog? = null
-
-    private val viewModel: MapViewModel by viewModels()
+    private lateinit var viewModel: MapViewModel
 
     override val bindingInflater: (LayoutInflater, ViewGroup?, Boolean) -> FragmentMapBinding =
         { layoutInflater, viewGroup, attachedToParent ->
@@ -122,6 +125,7 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
 
     override fun initView() {
         mainActivity = activity as MainActivity
+        viewModel = mainActivity.viewModel
         connectivityManager = mainActivity.networkConnectivityManager
         mapView = binding.map
         mapView.setLogoType(LogoType.TRANSPARENT)
@@ -134,9 +138,34 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
             focusOnUserLocation()
         }
         initAddressSearchView()
-        observeAddress()
-        observeRouting()
-        observeSavedLocation()
+
+        viewModel.getLocations()
+        observeSavedLocations()
+    }
+
+    private fun observeSavedLocations() {
+        viewModel.savedLocations.observe(viewLifecycleOwner) { savedLocationState ->
+            when {
+                savedLocationState.loading -> {
+                    mainActivity.setProgressbarVisibility(true)
+                }
+
+                savedLocationState.savedLocations != null -> {
+                    mainActivity.setProgressbarVisibility(false)
+                    if (savedLocationState.savedLocations.isEmpty().not()) {
+                        val markers = savedLocationState.savedLocations.map {
+                            createMarker(createLatLngObject(it.lat, it.lng), R.drawable.icon_flag)
+                        }
+                        mapView.addMarkers(markers)
+                    }
+                }
+
+                savedLocationState.errorMessage.isNullOrEmpty().not() -> {
+                    mainActivity.setProgressbarVisibility(false)
+                    showToast(savedLocationState.errorMessage!!)
+                }
+            }
+        }
     }
 
     private fun observeSavedLocation() {
@@ -166,15 +195,20 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
                     showToast(resources.getString(R.string.enter_lat_long_error_message))
                 } else {
                     val latLng = createLatLngObject(lat!!.toDouble(), lng!!.toDouble())
+                    val marker =
+                        createMarker(latLng, org.neshan.mapsdk.R.drawable.ic_cluster_marker_blue)
+                    removeCurrentMarker()
+                    currentMarker = marker
+                    mapView.addMarker(marker)
+                    mapView.moveCamera(latLng, 0f)
                     fetchAddress(latLng)
+                    dismissSearchBottomSheetDialog()
                 }
             }
         }
     }
 
     private fun fetchAddress(latLng: LatLng) {
-        addNewMarkerToMap(latLng)
-        dismissSearchBottomSheetDialog()
         viewModel.getAddress(latLng.latitude, latLng.longitude)
     }
 
@@ -182,20 +216,25 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
         LatLng(lat, lng)
 
     private fun observeAddress() {
-        viewModel.address.observe(viewLifecycleOwner) { addressState ->
-            when {
-                addressState.loading -> {
-                    mainActivity.setProgressbarVisibility(true)
-                }
+        lifecycleScope.launch {
+            withContext(Dispatchers.Main) {
 
-                addressState.address != null -> {
-                    mainActivity.setProgressbarVisibility(false)
-                    showRoutingView(addressState.address)
-                }
+                viewModel.address.observe(viewLifecycleOwner) { addressState ->
+                    when {
+                        addressState.loading -> {
+                            mainActivity.setProgressbarVisibility(true)
+                        }
 
-                addressState.errorMessage.isNullOrEmpty().not() -> {
-                    mainActivity.setProgressbarVisibility(false)
-                    showToast(addressState.errorMessage!!)
+                        addressState.address != null -> {
+                            mainActivity.setProgressbarVisibility(false)
+                            showRoutingView(addressState.address)
+                        }
+
+                        addressState.errorMessage.isNullOrEmpty().not() -> {
+                            mainActivity.setProgressbarVisibility(false)
+                            showToast(addressState.errorMessage!!)
+                        }
+                    }
                 }
             }
         }
@@ -203,17 +242,15 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
 
     private fun initLayoutReferences() {
         mapView.setOnMapLongClickListener {
-            addNewMarkerToMap(it)
+            val marker = createMarker(it, org.neshan.mapsdk.R.drawable.ic_cluster_marker_blue)
+            removeCurrentMarker()
+            currentMarker = marker
+            mapView.addMarker(marker)
+            mapView.moveCamera(it, 0f)
             fetchAddress(it)
+            observeAddress()
+            dismissSearchBottomSheetDialog()
         }
-    }
-
-    private fun addNewMarkerToMap(it: LatLng) {
-        val marker = createMarker(it)
-        removeCurrentMarker()
-        currentMarker = marker
-        mapView.addMarker(marker)
-        mapView.moveCamera(it, 0f)
     }
 
     private fun checkGpsAvailability() {
@@ -451,7 +488,7 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
         }
     }
 
-    private fun createMarker(loc: LatLng): Marker {
+    private fun createMarker(loc: LatLng, icon: Int): Marker {
         val animStBl = AnimationStyleBuilder()
         animStBl.fadeAnimationType = AnimationType.ANIMATION_TYPE_SMOOTHSTEP
         animStBl.sizeAnimationType = AnimationType.ANIMATION_TYPE_SPRING
@@ -463,7 +500,7 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
         markStCr.size = 30f
         markStCr.bitmap = BitmapUtils.createBitmapFromAndroidBitmap(
             BitmapFactory.decodeResource(
-                resources, org.neshan.mapsdk.R.drawable.ic_cluster_marker_blue
+                resources, icon
             )
         )
         markStCr.animationStyle = animSt
@@ -526,15 +563,23 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
                 }
             }
             view.savedLocationsButton.setOnClickListener {
-                viewModel.getLocations()
+                routingViewContainer.removeAllViews()
+                goToSavedLocations()
             }
             view.routingButton.setOnClickListener {
                 if (!isRouteFetched) {
                     fetchRoute()
+                    observeRouting()
                     isRouteFetched = true
                 }
             }
         }
+    }
+
+    private fun goToSavedLocations() {
+        val action =
+            MapFragmentDirections.actionMapFragmentToSavedLocationsFragment()
+        findNavController().navigate(action, NavOptions.Builder().setLaunchSingleTop(false).build())
     }
 
     private fun showSaveLocationDialog(savedLocationListener: () -> Unit) {
@@ -542,18 +587,26 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
         val dialog = AlertDialog.Builder(context).setView(view.root).show()
 
         view.btnSave.setOnClickListener {
-            if (view.editCaption.text.toString().isNullOrEmpty().not()) {
-                val savedLocation = saveLocation(view.editCaption.text.toString())
-                addLabelToMap(savedLocation)
-                savedLocationListener()
-                dialog.dismiss()
+            val text = view.editCaption.text.toString()
+            if (text.isNullOrEmpty().not()) {
+                val savedLocation = saveLocation(text)
+                if (savedLocation != null) {
+                    observeSavedLocation()
+                    val marker = createMarker(
+                        createLatLngObject(savedLocation.lat, savedLocation.lng),
+                        R.drawable.icon_flag
+                    )
+                    mapView.addMarker(marker)
+                    savedLocationListener()
+                    dialog.dismiss()
+                }
             } else {
                 showToast(resources.getString(R.string.fill_caption_message))
             }
         }
     }
-    private fun addLabelToMap(loc: SavedLocation) {
 
+    private fun addLabelToMap(loc: SavedLocation) {
         val textStyleBuilder = TextStyleBuilder()
         textStyleBuilder.fontSize = 18f
         textStyleBuilder.color = Color(-0x1)
@@ -568,13 +621,16 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
         mapView.addLabel(label)
     }
 
-    private fun saveLocation(caption: String): SavedLocation {
-        val location = SavedLocation(
-            currentMarker!!.latLng.latitude,
-            currentMarker!!.latLng.longitude,
-            caption
-        )
-        viewModel.saveLocation(location)
+    private fun saveLocation(caption: String): SavedLocation? {
+        var location: SavedLocation? = null
+        if (currentMarker != null) {
+            location = SavedLocation(
+                lat = currentMarker!!.latLng.latitude,
+                lng = currentMarker!!.latLng.longitude,
+                caption = caption
+            )
+            viewModel.saveLocation(location)
+        }
         return location
     }
 
@@ -586,12 +642,14 @@ class MapFragment : BaseBindingFragment<FragmentMapBinding>() {
     }
 
     private fun fetchRoute() {
-        viewModel.getRoutes(
-            createLatLngObject(
-                userLocation!!.latitude,
-                userLocation!!.longitude
-            ), currentMarker!!.latLng
-        )
+        if (userLocation != null && currentMarker != null) {
+            viewModel.getRoutes(
+                createLatLngObject(
+                    userLocation!!.latitude,
+                    userLocation!!.longitude
+                ), currentMarker!!.latLng
+            )
+        }
     }
 
     private fun removeRouteFromMap() {

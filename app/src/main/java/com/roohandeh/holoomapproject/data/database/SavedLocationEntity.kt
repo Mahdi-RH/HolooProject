@@ -16,4 +16,4 @@ data class SavedLocationEntity(
     var id: Int = 0
 }
 
-fun SavedLocationEntity.toLocation() = SavedLocation( lat, lng, caption)
+fun SavedLocationEntity.toLocation() = SavedLocation(id = id, lat, lng, caption)
